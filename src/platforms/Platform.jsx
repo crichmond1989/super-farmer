@@ -6,10 +6,9 @@ import Uniswap from "./Uniswap";
 /**
  *
  * @param {object} props
- * @param {Map<string,number>} props.prices
  * @param {import("ethers").providers.Provider} props.provider
  */
-export default function Platform({ clock, prices, provider }) {
+export default function Platform({ provider }) {
   const [invested, setInvested] = useState(1000);
 
   return (
@@ -24,7 +23,7 @@ export default function Platform({ clock, prices, provider }) {
       </div>
       <div className="grid">
         {[...pools.values()].map(pool => (
-          <Uniswap key={pool.address} {...{ clock, invested, pool, prices, provider }} />
+          <Uniswap key={pool.address} {...{ invested, pool, provider }} />
         ))}
       </div>
     </div>

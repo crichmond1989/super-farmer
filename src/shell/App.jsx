@@ -3,15 +3,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { providers } from "ethers";
 
 import Platform from "../platforms/Platform";
-import getPrices from "../prices/getPrices";
+import { sync } from "../prices/priceService";
 import Header from "./Header";
 
 const intervalSecs = 15;
 
 export default function App() {
-  const [address, setAddress] = useState("");
   const [clock, setClock] = useState(0);
-  const [prices, setPrices] = useState();
 
   /**
    * @type {import("ethers").providers.Provider}
@@ -28,7 +26,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    getPrices().then(x => setPrices(new Map(x.map(y => [y.symbol.toUpperCase(), y.current_price]))));
+    sync();
   }, [clock]);
 
   useEffect(() => {
@@ -41,9 +39,9 @@ export default function App() {
 
   return (
     <div>
-      <Header address={address} />
+      <Header />
       <main className="container my-3">
-        <Platform address={address} clock={clock} prices={prices} provider={provider} />
+        <Platform provider={provider} />
       </main>
     </div>
   );
