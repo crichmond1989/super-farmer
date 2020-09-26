@@ -1,0 +1,19 @@
+@media (prefers-color-scheme: light) {
+  body {
+    background: var(--light);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-gap: 1rem 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(23rem, 1fr));
+}
+
+.swap-card table {
+  width: 100%;
+}
+
+.swap-card td {
+  width: 50%;
+}
