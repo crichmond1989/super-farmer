@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Contract } from "ethers";
 
 import uniswapPairAbi from "../contracts/uniswapPairAbi";
-import useCustomEvent from "../events/useCustomEvent";
+import useStore from "../data/useStore";
 import format from "../formatting/format";
 import { get } from "../prices/priceStore";
 import tokens from "../tokens/tokenData";
@@ -22,38 +22,51 @@ export default function Uniswap({ invested, pool, provider }) {
   const [reserves, setReserves] = useState([]);
   const [reservePrices, setReservePrices] = useState([]);
 
-  const updatePrices = useCallback(async () => {
-    const cropData = await get(pool.crop);
+  useStore(
+    "prices",
+    async () => {
+      const cropData = await get(pool.crop);
 
-    setCropPrice(cropData.current_price);
+      setCropPrice(cropData.current_price);
 
-    if (reserves.length) {
-      const reserveData = [await get(pool.symbols[0]), await get(pool.symbols[1])];
+      if (reserves.length) {
+        const reserveData = [await get(pool.symbols[0]), await get(pool.symbols[1])];
 
-      setReservePrices(reserveData.map(x => x.current_price));
-    }
-  }, [pool.crop, pool.symbols, reserves.length]);
+        setReservePrices(reserveData.map(x => x.current_price));
+      }
+    },
+    [pool.crop, pool.symbols, reserves.length],
+  );
 
-  const updateReserves = useCallback(async () => {
+  const digits = useMemo(() => pool.symbols.map(x => tokens.get(x).digits), [pool.symbols]);
+
+  const updateReservesFromRaw = useCallback(
+    raw => {
+      const newReserves = raw.map((x, i) => x / Math.pow(10, digits[i]));
+
+      setReserves(newReserves);
+    },
+    [digits, setReserves],
+  );
+
+  const updateReservesFromContract = useCallback(async () => {
     if (contract) {
-      const digitsA = tokens.get(pool.symbols[0]).digits;
-      const digitsB = tokens.get(pool.symbols[1]).digits;
+      const raw = await contract.getReserves();
 
-      const [reserve1, reserve2] = await contract.getReserves();
-
-      setReserves([reserve1 / Math.pow(10, digitsA), reserve2 / Math.pow(10, digitsB)]);
+      updateReservesFromRaw(raw);
     }
-  }, [contract, setReserves, pool.symbols]);
+  }, [contract, updateReservesFromRaw]);
+
+  const updateReservesFromSync = useCallback(async () => {
+    if (contract) {
+      contract.on("Sync", (newReserve1, newReserve2) => updateReservesFromRaw([newReserve1, newReserve2]));
+    }
+  }, [contract, updateReservesFromRaw]);
 
   useEffect(() => {
-    updatePrices();
-  }, [updatePrices]);
-
-  useCustomEvent("prices", updatePrices, [updatePrices]);
-
-  useEffect(() => {
-    updateReserves();
-  }, [updateReserves]);
+    updateReservesFromContract();
+    updateReservesFromSync();
+  }, [updateReservesFromContract, updateReservesFromSync]);
 
   useEffect(() => {
     if (provider) {
@@ -80,9 +93,14 @@ export default function Uniswap({ invested, pool, provider }) {
     <div>
       <div className="card">
         <div className="card-header" style={{ display: "flex", justifyContent: "space-between" }}>
-          <span className="mr-2">
+          <a
+            className="mr-2"
+            href={`https://uniswap.info/pair/${pool.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             {pool.symbols[0]}/{pool.symbols[1]}
-          </span>
+          </a>
           <a
             href={`https://etherscan.io/address/${pool.address}`}
             target="_blank"

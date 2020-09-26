@@ -14,7 +14,15 @@ export default function App() {
   /**
    * @type {import("ethers").providers.Provider}
    */
-  const provider = useMemo(() => providers.getDefaultProvider(), []);
+  const provider = useMemo(
+    () =>
+      providers.getDefaultProvider("homestead", {
+        alchemy: "jSOkP3oJXXlVsP9IpTpA-Rnhg7aVolb2",
+        etherscan: "EI3F81HDGHQ7E77I7EWPXGNXE41UGJDIW6",
+        infura: "cb4f03b5b06646bdb999f6b98249cb59",
+      }),
+    [],
+  );
 
   useEffect(() => {
     // TODO: import MetaMask amounts to show real APY

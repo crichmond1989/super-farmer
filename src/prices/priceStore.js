@@ -1,4 +1,4 @@
-import getDb from "../db/getDb";
+import getDb from "../data/getDb";
 
 const name = "prices";
 
