@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
+import { getInvestmentAmount, setInvestmentAmount } from "../inputs/inputService";
 import pools from "../pools/uniswap";
 import Uniswap from "./Uniswap";
 
@@ -11,13 +12,30 @@ import Uniswap from "./Uniswap";
 export default function Platform({ provider }) {
   const [invested, setInvested] = useState(1000);
 
+  useEffect(() => {
+    setInvested(getInvestmentAmount() || 1000);
+  }, [setInvested]);
+
+  const updateInvested = useCallback(
+    x => {
+      setInvested(x);
+      setInvestmentAmount(x);
+    },
+    [setInvested],
+  );
+
   return (
     <div>
       <div className="grid">
         <form>
           <div className="form-group">
             <label htmlFor="invested">Investment Amount</label>
-            <input type="tel" className="form-control" value={invested} onChange={e => setInvested(e.target.value)} />
+            <input
+              type="tel"
+              className="form-control"
+              value={invested}
+              onChange={e => updateInvested(e.target.value)}
+            />
           </div>
         </form>
       </div>
