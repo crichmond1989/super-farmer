@@ -1,4 +1,4 @@
-const tokens = [
+const data = [
   {
     digits: 18,
     name: "dai",
@@ -31,4 +31,4 @@ const tokens = [
   },
 ];
 
-export default new Map(tokens.map(x => [x.symbol, x]));
+export default new Map(data.map(x => [x.symbol, x]));

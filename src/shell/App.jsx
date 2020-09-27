@@ -3,20 +3,26 @@ import React, { useEffect, useMemo, useState } from "react";
 import { providers } from "ethers";
 
 import Platform from "../platforms/Platform";
-import getPrices from "../prices/getPrices";
+import { sync } from "../prices/priceService";
 import Header from "./Header";
 
 const intervalSecs = 15;
 
 export default function App() {
-  const [address, setAddress] = useState("");
   const [clock, setClock] = useState(0);
-  const [prices, setPrices] = useState();
 
   /**
    * @type {import("ethers").providers.Provider}
    */
-  const provider = useMemo(() => providers.getDefaultProvider(), []);
+  const provider = useMemo(
+    () =>
+      providers.getDefaultProvider("homestead", {
+        alchemy: "jSOkP3oJXXlVsP9IpTpA-Rnhg7aVolb2",
+        etherscan: "EI3F81HDGHQ7E77I7EWPXGNXE41UGJDIW6",
+        infura: "cb4f03b5b06646bdb999f6b98249cb59",
+      }),
+    [],
+  );
 
   useEffect(() => {
     // TODO: import MetaMask amounts to show real APY
@@ -28,7 +34,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    getPrices().then(x => setPrices(new Map(x.map(y => [y.symbol.toUpperCase(), y.current_price]))));
+    sync();
   }, [clock]);
 
   useEffect(() => {
@@ -41,9 +47,9 @@ export default function App() {
 
   return (
     <div>
-      <Header address={address} />
+      <Header />
       <main className="container my-3">
-        <Platform address={address} clock={clock} prices={prices} provider={provider} />
+        <Platform provider={provider} />
       </main>
     </div>
   );
