@@ -1,10 +1,10 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 
 import { providers } from "ethers";
 
 import useInterval from "../intervals/useInterval";
 import Platform from "../platforms/Platform";
-import { sync } from "../prices/priceService";
+import tokenAuxService from "../tokenAux/tokenAuxService";
 import Header from "./Header";
 
 export default function App() {
@@ -21,7 +21,11 @@ export default function App() {
     [],
   );
 
-  useInterval(60, sync);
+  useEffect(() => {
+    tokenAuxService.sync();
+  }, []);
+
+  useInterval(60, tokenAuxService.sync);
 
   return (
     <div>

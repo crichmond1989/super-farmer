@@ -1,7 +1,9 @@
-export function getInvestmentAmount() {
-  return +localStorage.getItem("investmentAmount");
-}
+export default class {
+  getInvestmentAmount() {
+    return +localStorage.getItem("investmentAmount");
+  }
 
-export function setInvestmentAmount(value) {
-  localStorage.setItem("investmentAmount", value);
+  setInvestmentAmount(value) {
+    localStorage.setItem("investmentAmount", value);
+  }
 }
