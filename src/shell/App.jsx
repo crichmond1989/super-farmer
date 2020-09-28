@@ -1,16 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 
 import { providers } from "ethers";
 
+import useInterval from "../intervals/useInterval";
 import Platform from "../platforms/Platform";
-import { sync } from "../prices/priceService";
+import tokenAuxService from "../tokenAux/tokenAuxService";
 import Header from "./Header";
 
-const intervalSecs = 15;
-
 export default function App() {
-  const [clock, setClock] = useState(0);
-
   /**
    * @type {import("ethers").providers.Provider}
    */
@@ -25,25 +22,10 @@ export default function App() {
   );
 
   useEffect(() => {
-    // TODO: import MetaMask amounts to show real APY
-    // if (window.ethereum) {
-    //   window.ethereum.request({ method: "eth_requestAccounts" }).then(x => {
-    //     setAddress(x[0]);
-    //   });
-    // }
+    tokenAuxService.sync();
   }, []);
 
-  useEffect(() => {
-    sync();
-  }, [clock]);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => setClock(clock + 1), intervalSecs * 1000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  });
+  useInterval(60, tokenAuxService.sync);
 
   return (
     <div>

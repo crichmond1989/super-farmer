@@ -5,34 +5,58 @@ import { Contract } from "ethers";
 import uniswapPairAbi from "../contracts/uniswapPairAbi";
 import useStore from "../data/useStore";
 import format from "../formatting/format";
-import { get } from "../prices/priceStore";
+import poolAuxService from "../poolAux/poolAuxService";
+import tokenAuxService from "../tokenAux/tokenAuxService";
+import TokenIcon from "../tokenIcon/TokenIcon";
 import tokens from "../tokens/tokenData";
 
 /**
  *
  * @param {object} props
  * @param {number} props.invested
- * @param {object} props.pool
- * @param {Map<string,number>} props.prices
+ * @param {{
+ *  address: string
+ *  crop: string
+ *  cropAmount: number
+ *  symbols: string[]
+ * }} props.pool
  * @param {import("ethers").providers.Provider} props.provider
  */
 export default function Uniswap({ invested, pool, provider }) {
   const [contract, setContract] = useState();
+  const [cropImage, setCropImage] = useState();
   const [cropPrice, setCropPrice] = useState();
   const [reserves, setReserves] = useState([]);
+  const [reserveImages, setReserveImages] = useState([]);
   const [reservePrices, setReservePrices] = useState([]);
 
   useStore(
-    "prices",
+    `poolAux/${pool.address}`,
     async () => {
-      const cropData = await get(pool.crop);
+      const poolAux = await poolAuxService.get(pool.address);
 
-      setCropPrice(cropData.current_price);
+      if (poolAux) {
+        setReserves(poolAux.reserves);
+      }
+    },
+    [pool.address, setReserves],
+  );
+
+  useStore(
+    "tokenAux",
+    async () => {
+      const cropData = await tokenAuxService.get(pool.crop);
+
+      if (cropData) {
+        setCropImage(cropData.image);
+        setCropPrice(cropData.current_price);
+      }
 
       if (reserves.length) {
-        const reserveData = [await get(pool.symbols[0]), await get(pool.symbols[1])];
+        const reserveData = await Promise.all(pool.symbols.map(tokenAuxService.get));
 
-        setReservePrices(reserveData.map(x => x.current_price));
+        setReserveImages(reserveData.filter(x => x).map(x => x.image));
+        setReservePrices(reserveData.filter(x => x).map(x => x.current_price));
       }
     },
     [pool.crop, pool.symbols, reserves.length],
@@ -44,16 +68,16 @@ export default function Uniswap({ invested, pool, provider }) {
     raw => {
       const newReserves = raw.map((x, i) => x / Math.pow(10, digits[i]));
 
-      setReserves(newReserves);
+      poolAuxService.put({ address: pool.address, reserves: newReserves });
     },
-    [digits, setReserves],
+    [digits, pool.address],
   );
 
   const updateReservesFromContract = useCallback(async () => {
     if (contract) {
       const raw = await contract.getReserves();
 
-      updateReservesFromRaw(raw);
+      updateReservesFromRaw(raw.slice(0, 2));
     }
   }, [contract, updateReservesFromRaw]);
 
@@ -74,13 +98,10 @@ export default function Uniswap({ invested, pool, provider }) {
     }
   }, [pool, provider, setContract]);
 
-  const [reserve1, reserve2] = reserves;
-  const [reservePrice1, reservePrice2] = reservePrices;
-
   let liquidity;
 
   if (reserves.length && reservePrices.length) {
-    liquidity = reserve1 * reservePrice1 + reserve2 * reservePrice2;
+    liquidity = reserves.reduce((p, x, i) => p + x * reservePrices[i], 0);
   }
 
   let crops;
@@ -115,12 +136,16 @@ export default function Uniswap({ invested, pool, provider }) {
             <tbody>
               <tr>
                 <td>Reserves:</td>
-                <td>{getReserve(reserve1, pool.symbols[0])}</td>
+                <td>{getReserve(reserves[0], pool.symbols[0], reserveImages[0], reservePrices[0]) || "Loading..."}</td>
               </tr>
-              <tr>
-                <td />
-                <td>{getReserve(reserve2, pool.symbols[1])}</td>
-              </tr>
+              {pool.symbols.slice(1).map((symbol, i) => (
+                <tr key={i}>
+                  <td />
+                  <td>
+                    {getReserve(reserves[i + 1], symbol, reserveImages[i + 1], reservePrices[i + 1]) || "Loading..."}
+                  </td>
+                </tr>
+              ))}
               <tr>
                 <td>Liquidity:</td>
                 <td>{format(liquidity, "$")}</td>
@@ -128,13 +153,13 @@ export default function Uniswap({ invested, pool, provider }) {
               <tr>
                 <td>Crops Available:</td>
                 <td>
-                  {format(pool.cropAmount, "0")} {pool.crop} ({format(cropPrice, "$")})
+                  <TokenIcon image={cropImage} /> {format(pool.cropAmount, "0")} {pool.crop} ({format(cropPrice, "$")})
                 </td>
               </tr>
               <tr>
                 <td>Crops Farmed:</td>
                 <td>
-                  {format(crops, "2")} {pool.crop}
+                  <TokenIcon image={cropImage} /> {format(crops, "2")} {pool.crop}
                 </td>
               </tr>
               <tr>
@@ -151,11 +176,11 @@ export default function Uniswap({ invested, pool, provider }) {
   );
 }
 
-function getReserve(data, symbol) {
+function getReserve(data, symbol, image, price) {
   return (
     data && (
       <>
-        {format(data, "0")} {symbol}
+        <TokenIcon image={image} /> {format(data, "0")} {symbol} ({format(price, "$")})
       </>
     )
   );
